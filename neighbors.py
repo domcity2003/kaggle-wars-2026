@@ -44,8 +44,8 @@ def main():
         train, test, labels = load_data()
         columns = [f"X{i:03d}" for i in range(60)]
         numeric = np.concatenate([
-            train[columns].to_numpy(dtype=np.float32),
-            test[columns].to_numpy(dtype=np.float32),
+            np.ascontiguousarray(train[columns].to_numpy(dtype=np.float32)),
+            np.ascontiguousarray(test[columns].to_numpy(dtype=np.float32)),
         ])
         categories = np.concatenate([train["Z"].to_numpy(), test["Z"].to_numpy()])
         missing = np.isnan(numeric)

@@ -14,7 +14,10 @@ from train_cat import DATA, load_data
 
 def geometry(train, test):
     columns = [f"X{i:03d}" for i in range(60)]
-    numeric = np.concatenate([frame[columns].to_numpy(dtype=np.float32) for frame in (train, test)])
+    numeric = np.concatenate([
+        np.ascontiguousarray(frame[columns].to_numpy(dtype=np.float32))
+        for frame in (train, test)
+    ])
     category = np.concatenate([frame["Z"].to_numpy() for frame in (train, test)])
     missing = np.isnan(numeric)
     _, pattern = np.unique(np.packbits(missing, axis=1), axis=0, return_inverse=True)
@@ -36,7 +39,7 @@ def make_graph(rows, features, neighbors, category_factor):
         candidate = rows[shortlist[section]]
         shared = ~(missing[row, None] | missing[candidate])
         delta = ranks[row, None] - ranks[candidate]
-        distance = np.sqrt((delta**2 * shared).sum(axis=2) / np.maximum(shared.sum(axis=2), 1))
+        distance = np.sqrt((delta * delta * shared).sum(axis=2) / np.maximum(shared.sum(axis=2), 1))
         different_mask = pattern[row, None] != pattern[candidate]
         closest = np.argsort(distance, axis=1)[:, 1:3]
         gap = np.take_along_axis(distance, closest, axis=1)
@@ -57,7 +60,7 @@ def make_graph(rows, features, neighbors, category_factor):
         distances[section] = np.take_along_axis(penalized, chosen, axis=1)
 
     bandwidth = np.maximum(np.max(np.where(np.isfinite(distances), distances, 0), axis=1), 0.02)
-    weight = np.exp(-2 * (distances / bandwidth[:, None]) ** 2)
+    weight = np.exp(-(distances / bandwidth[:, None]) ** 2 / 0.5)
     weight *= np.where(category[rows, None] == category[rows[best]], 1, category_factor)
     source = np.repeat(np.arange(len(rows)), neighbors)
     matrix = csr_matrix((weight.ravel(), (source, best.ravel())), shape=(len(rows), len(rows)))
@@ -73,7 +76,7 @@ def smooth(probabilities, graph, mix, steps, sharpness):
     for _ in range(steps):
         messages = result ** sharpness
         messages /= messages.sum(axis=1, keepdims=True)
-        result = (1 - mix) * probabilities + mix * (graph @ messages)
+        result = (1 - mix) * probabilities + (mix * graph) @ messages
     return result.astype(np.float32)
 
 
