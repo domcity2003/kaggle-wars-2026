@@ -12,6 +12,7 @@ from train_cat import DATA, load_data
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", default="paired_diagnostic.npz")
+    parser.add_argument("--summary-only", action="store_true", help="Print diagnostics without saving the cache.")
     args = parser.parse_args()
     train, test, labels = load_data()
     columns = [f"X{i:03}" for i in range(60)]
@@ -43,7 +44,8 @@ def main():
     mutual = (neighbors >= 0) & (neighbors != rows) & (neighbors[neighbors] == rows)
     print(f"Reciprocal pairs account for {mutual.mean():.2%} of training rows")
     print(f"Median reciprocal distance {np.median(distances[mutual, 0]):.6f}")
-    np.savez(DATA / args.output, neighbor=neighbors, dist=distances, group=groups, mutual=mutual)
+    if not args.summary_only:
+        np.savez(DATA / args.output, neighbor=neighbors, dist=distances, group=groups, mutual=mutual)
 
 
 if __name__ == "__main__":

@@ -1,14 +1,25 @@
 # Kaggle Wars 2026
 
-**0.53597 public macro F1 · 12th on the public leaderboard after the deadline · 7 submissions**
+**A validation case study in near-duplicate rows and distribution shift.** Reciprocal near-neighbor pairs accounted for 98.26% of training rows under the pair diagnostic. A random split put related rows on both sides of the validation boundary and gave a 1-nearest-neighbor model about 0.93 macro F1. Holding out whole 5,000-row blocks kept those pairs together.
 
-A one-day tabular classification challenge run by the OWASP Student Chapter during Saturnalia. The task was to predict one of 11 classes from 76 anonymized numeric features and one categorical feature. Macro F1 gives each class equal weight. Kaggle scored 30% of the test set publicly and reserved 70% for the final ranking. The rank above refers to the public leaderboard. [Competition](https://www.kaggle.com/competitions/kagglewars) · [Leaderboard](https://www.kaggle.com/competitions/kagglewars/leaderboard)
+A one-day tabular classification challenge run by the OWASP Student Chapter during Saturnalia. The task was to predict one of 11 classes from 76 anonymized numeric features and one categorical feature. Macro F1 gives each class equal weight. [Competition](https://www.kaggle.com/competitions/kagglewars)
 
 ## Why the validation split mattered
 
-Reciprocal near-neighbor pairs accounted for **98.26%** of training rows under our pair diagnostic. A random split could put one member of a pair in training and the other in validation. A 1-nearest-neighbor model scored about **0.93** on random folds, so we switched to holding out whole 5,000-row blocks to keep those pairs together.
+The pair diagnostic matches within 5,000-row blocks among rows with the same label, category, and missingness pattern. The 98.26% measures reciprocal pairing under those conditions. The grouped validation split holds out whole blocks independently of the labels.
 
 Grouped validation still looked different from the test set. Complete rows made up **54.8%** of the training set and **70.7%** of the test set. A train-versus-test classifier reached **0.945 AUC** under grouped validation. We compared unweighted results with results weighted by missingness, category, and distance to the training set. The first submission scored **0.55569** on that matched validation set and **0.51179** on the public leaderboard.
+
+## Run the pairing diagnostic
+
+Use Python 3.12 and the official competition ZIP at `data/kagglewars.zip`. If the dependencies are already installed, skip the first command.
+
+```bash
+python -m pip install -r requirements.txt
+python prepare_pairs.py --summary-only
+```
+
+It prints the reciprocal pair rate (98.26% in the original run) and the median distance across those pairs. It needs no training run and writes no cache in summary-only mode. [Official data](https://www.kaggle.com/competitions/kagglewars/data)
 
 ## The best entry
 
@@ -16,7 +27,7 @@ Grouped validation still looked different from the test set. Complete rows made 
 2. Combine their predictions with a 15-nearest-neighbor model and LightGBM probabilities smoothed over a graph of similar rows.
 3. Apply a small class-prior adjustment, then choose labels by optimizing estimated macro F1 across the batch.
 
-The best entry gained **0.02418** macro F1 over the first. The full-data neural refit in round seven scored below round six.
+The best entry gained **0.02418** macro F1 over the first and scored **0.53597** in round six of seven. The recorded placement was **12th on the public leaderboard** after the deadline. Kaggle scored 30% of the test set on that board and reserved 70% for final ranking. The final private standing is unverified. [Leaderboard](https://www.kaggle.com/competitions/kagglewars/leaderboard)
 
 | Round | Variant | Public macro F1 |
 | ---: | --- | ---: |
